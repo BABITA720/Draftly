@@ -47,11 +47,93 @@ TONES = [
 ]
 
 
-def get_client() -> genai.Client:
-    api_key = os.getenv("GEMINI_API_KEY")
+class GeminiConfigurationError(RuntimeError):
+    """The app cannot initialize Gemini with the configured credentials."""
+
+
+class GeminiAuthenticationError(RuntimeError):
+    """Gemini rejected the configured API key or its permissions."""
+
+
+class GeminiQuotaError(RuntimeError):
+    """Gemini rejected the request because of quota or rate limits."""
+
+
+class GeminiServiceError(RuntimeError):
+    """Gemini could not complete the request because of a temporary failure."""
+
+
+def get_api_key() -> str:
+    """Read the key from Replit's environment, with Streamlit secrets as a fallback."""
+    api_key = os.getenv("GEMINI_API_KEY", "").strip()
     if not api_key:
-        raise RuntimeError("GEMINI_API_KEY is not configured.")
-    return genai.Client(api_key=api_key)
+        try:
+            api_key = str(st.secrets.get("GEMINI_API_KEY", "")).strip()
+        except Exception:
+            api_key = ""
+    return api_key
+
+
+def classify_gemini_error(error: Exception) -> RuntimeError:
+    """Convert provider errors into safe, actionable app-level messages."""
+    message = str(error).lower()
+
+    if any(term in message for term in ("quota", "rate limit", "resource exhausted", "429")):
+        return GeminiQuotaError(
+            "Gemini quota or rate limits were reached. Check your Google AI Studio "
+            "usage and try again later."
+        )
+
+    if any(
+        term in message
+        for term in (
+            "api key",
+            "api_key",
+            "invalid key",
+            "invalid api",
+            "unauthenticated",
+            "authentication",
+            "permission denied",
+            "forbidden",
+            "401",
+            "403",
+        )
+    ):
+        return GeminiAuthenticationError(
+            "Gemini rejected the configured API key. Replace GEMINI_API_KEY in "
+            "Replit Secrets with an active Google AI Studio key."
+        )
+
+    if any(
+        term in message
+        for term in (
+            "connection",
+            "deadline",
+            "temporarily unavailable",
+            "service unavailable",
+            "timeout",
+            "500",
+            "502",
+            "503",
+        )
+    ):
+        return GeminiServiceError(
+            "Gemini is temporarily unavailable. Check your connection and try again."
+        )
+
+    return GeminiServiceError("Gemini could not complete the request. Please try again.")
+
+
+def get_client() -> genai.Client:
+    api_key = get_api_key()
+    if not api_key:
+        raise GeminiConfigurationError(
+            "Gemini is not connected. Add GEMINI_API_KEY to Replit Secrets, then restart the app."
+        )
+    try:
+        return genai.Client(api_key=api_key)
+    except Exception as error:
+        raise classify_gemini_error(error) from error
 
 
 def build_prompt(
@@ -109,14 +191,17 @@ def generate_content(
     details: str,
 ) -> str:
     client = get_client()
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=build_prompt(content_type, topic, tone, length, audience, details),
-        config=types.GenerateContentConfig(
-            temperature=0.78,
-            max_output_tokens=8192,
-        ),
-    )
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=build_prompt(content_type, topic, tone, length, audience, details),
+            config=types.GenerateContentConfig(
+                temperature=0.78,
+                max_output_tokens=8192,
+            ),
+        )
+    except Exception as error:
+        raise classify_gemini_error(error) from error
     result = response.text
     if not result:
         raise RuntimeError("Gemini returned an empty response. Try a more specific topic.")
@@ -240,13 +325,16 @@ with tabs[0]:
                         "created": datetime.now().strftime("%b %d, %Y · %I:%M %p"),
                     }
                     st.session_state["history"].insert(0, {**st.session_state["last_meta"], "draft": draft})
-                except Exception as error:
-                    st.error(
-                        "We couldn't generate that draft. Check that your Gemini API key is valid, "
-                        "then try again."
-                    )
-                    with st.expander("Technical details"):
-                        st.caption(str(error))
+                except GeminiConfigurationError as error:
+                    st.error(str(error))
+                except GeminiAuthenticationError as error:
+                    st.error(str(error))
+                except GeminiQuotaError as error:
+                    st.warning(str(error))
+                except GeminiServiceError as error:
+                    st.error(str(error))
+                except Exception:
+                    st.error("We couldn't generate that draft. Please try again.")
 
     if st.session_state["draft"]:
         st.divider()
