@@ -1,36 +1,39 @@
-# [Project name]
+# Draftly — AI Content Studio
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Draftly is a Streamlit app that uses Google Gemini to turn content briefs into YouTube scripts, social media posts, and SEO content.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `streamlit run app.py --server.port 5000` — run the Streamlit app
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- Required secret: `GEMINI_API_KEY` — Google Gemini API key
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- Python 3.13
+- UI: Streamlit
+- AI: Google Gemini (`google-genai`)
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `app.py` — Streamlit UI, prompt construction, Gemini generation, and session history
+- `.streamlit/config.toml` — local Streamlit server settings
+- `pyproject.toml` / `uv.lock` — Python dependencies
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- The app uses the user's `GEMINI_API_KEY` secret through the official `google-genai` SDK.
+- Generated drafts and history are intentionally session-scoped; no database is needed for the first version.
+- Prompts are format-aware so each output has a useful structure rather than generic paragraphs.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Choose YouTube Video Script, Social Media Post, or SEO Content.
+- Customize tone, audience, length, and additional context.
+- Generate content with Gemini, edit it in place, download it as a text file, and revisit drafts within the current session.
 
 ## User preferences
 
