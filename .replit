@@ -1,10 +1,10 @@
-run = "streamlit run app.py --server.port 5000 --server.address 0.0.0.0"
+run = "streamlit run app.py --server.port 8080 --server.address 0.0.0.0"
 modules = ["nodejs-24", "python-base-3.13"]
 entrypoint = "app.py"
 
 [[ports]]
-localPort = 5000
-externalPort = 5000
+localPort = 8080
+externalPort = 80
 
 [deployment]
 router = "application"
@@ -35,8 +35,8 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "streamlit run app.py --server.port 5000 --server.address 0.0.0.0"
-waitForPort = 5000
+args = "streamlit run app.py --server.port 8080 --server.address 0.0.0.0"
+waitForPort = 8080
 
 [agent]
 stack = "PNPM_WORKSPACE"
