@@ -1,4 +1,3 @@
-run = "streamlit run app.py --server.port 8080 --server.address 0.0.0.0"
 modules = ["nodejs-24", "python-base-3.13"]
 entrypoint = "app.py"
 
@@ -7,8 +6,8 @@ localPort = 8080
 externalPort = 80
 
 [deployment]
-router = "application"
-deploymentTarget = "autoscale"
+deploymentTarget = "cloudrun"
+run = ["streamlit", "run", "app.py", "--server.port", "8080", "--server.address", "0.0.0.0"]
 
 [deployment.postBuild]
 args = ["pnpm", "store", "prune"]
