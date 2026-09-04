@@ -125,7 +125,8 @@ def classify_gemini_error(error: Exception) -> RuntimeError:
 
 
 def get_client() -> genai.Client:
-    api_key = get_api_key()
+    api_key = "AQ.Ab8RN6LcfjD5wyE3RJg4hAcKI-og..."
+
     if not api_key:
         raise GeminiConfigurationError(
             "Gemini is not connected. Add GEMINI_API_KEY to Replit Secrets, then restart the app."
