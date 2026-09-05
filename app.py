@@ -1,111 +1,193 @@
 import os
 import time
-import logging
 import streamlit as st
 import google.genai as genai
 
-# Configure Page Layout
+# Set Google AI Studio Key directly in Environment
+os.environ["GEMINI_API_KEY"] = "AQ.Ab8RN6IfPm6qG5NQg-bNof6LgYKQ2vzaL0jRHpQM4usGfyTeeA"
+
+# --- Page Configuration ---
 st.set_page_config(
-    page_title="Draftly AI Content Engine",
+    page_title="Draftly | Enterprise AI Content Engine",
     page_icon="⚡",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-# Custom Exceptions
-class GeminiError(Exception): pass
-class GeminiConfigurationError(GeminiError): pass
-class GeminiQuotaError(GeminiError): pass
-class GeminiServiceError(GeminiError): pass
+# Custom Styling for Contest-Grade UI
+st.markdown("""
+<style>
+    .main-header {
+        font-size: 2.2rem;
+        font-weight: 700;
+        background: linear-gradient(90deg, #FF4B4B, #FF8F00);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0px;
+    }
+    .sub-header {
+        font-size: 1rem;
+        color: #888;
+        margin-bottom: 25px;
+    }
+    .stButton>button {
+        width: 100%;
+        background-color: #FF4B4B;
+        color: white;
+        font-weight: bold;
+        border-radius: 8px;
+        height: 48px;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-def classify_gemini_error(error: Exception) -> GeminiError:
-    msg = str(error).lower()
-    if any(t in msg for t in ["api key", "unauthorized", "authenticated", "401", "403"]):
-        return GeminiConfigurationError("API Key Configuration Error. Please verify key access.")
-    if any(t in msg for t in ["quota", "rate limit", "429"]):
-        return GeminiQuotaError("API Rate limit exceeded. Please retry in a few moments.")
-    return GeminiServiceError("Gemini Engine service unavailable. Check network setup.")
+# --- Gemini Client Initializer ---
+def get_gemini_client():
+    return genai.Client()
 
-def get_gemini_client() -> genai.Client:
-    api_key = "AQ.Ab8RN6K3qTrccvPoTqKIwcaZLqr8CLNvK98VeuXRRfLm5SQCKA"
-    if not api_key:
-        raise GeminiConfigurationError("API Key missing.")
-    return genai.Client(api_key=api_key)
-
-def build_prompt(content_type: str, topic: str, tone: str, length: str, audience: str, details: str) -> str:
+# --- Advanced Prompt Builder Engine ---
+def build_contest_prompt(content_type: str, topic: str, tone: str, length: str, audience: str, details: str, language: str) -> str:
     prompt = f"""
-[SYSTEM INSTRUCTION: DRAFTLY AI CONTENT ENGINE v2.5]
-Generate production-ready content for:
-- Format: {content_type}
-- Topic: {topic}
-- Target Audience: {audience or 'General Audience'}
-- Tone: {tone or 'Engaging & Authoritative'}
-- Target Depth: {length or 'Standard'}
+[SYSTEM ROLE: SENIOR CONTENT ARCHITECT & COPYWRITER]
+You are Draftly AI Engine v2.5, an enterprise-grade content generation system.
+Generate a production-ready, highly engaging piece of content based on the parameters below.
+
+[PARAMETERS]
+- Output Format: {content_type}
+- Core Topic: {topic}
+- Target Audience: {audience or 'General Professional Audience'}
+- Tone/Voice: {tone or 'Engaging, Authoritative & Concise'}
+- Content Depth: {length}
+- Target Language: {language}
 """
     if details:
-        prompt += f"\n[ADDITIONAL DETAILS & CONSTRAINTS]\n{details}\n"
+        prompt += f"\n[ADDITIONAL CONSTRAINTS & CONTEXT]\n{details}\n"
 
     if content_type == "YouTube Video Script":
         prompt += """
-[REQUIRED OUTPUT STRUCTURE]
-1. 3 Viral HIGH-CTR Title Options.
-2. Hook (0-15s) with explicit visual [Visual: ...] & verbal cues.
-3. Detailed Scene & Beat breakdown with spoken host narration.
-4. Outro & High-converting Call To Action (CTA).
+[REQUIRED FORMATTING & STRUCTURE]
+1. 💥 3 High-CTR Title Options (Optimized for YouTube Algorithm).
+2. 🎣 Hook (0-15 Seconds) with explicit [Visual Cue] & [Audio Cue] directions.
+3. 📜 Complete Scene-by-Scene Script Breakdown (Host Narration + Visual Directions).
+4. 🚀 High-Converting Outro & Call To Action (CTA).
 """
-    elif content_type == "Social Media Post":
+    elif content_type == "Social Media Post (LinkedIn/Twitter)":
         prompt += """
-[REQUIRED OUTPUT STRUCTURE]
-1. Pattern Interrupt Hook line.
-2. Readable caption body with bullet points & clean spacing.
-3. Engagement question for comment drive.
-4. 5-8 targeted hashtags.
+[REQUIRED FORMATTING & STRUCTURE]
+1. 🎯 Pattern Interrupt Hook Line.
+2. 📖 Clean, Line-Spaced Body with Actionable Bullet Points.
+3. 💬 Engagement Question (Designed to drive comment velocity).
+4. 🏷️ 5-8 Relevant & Trending Hashtags.
 """
-    else:
+    elif content_type == "SEO Long-Form Article":
         prompt += """
-[REQUIRED OUTPUT STRUCTURE]
-1. SEO Title & Meta Description.
-2. Key Takeaways summary block.
-3. Comprehensive H2/H3 body content.
-4. Strategic Conclusion & Next Steps CTA.
+[REQUIRED FORMATTING & STRUCTURE]
+1. 📌 SEO Title & Meta Description (Under 160 characters).
+2. 💡 Key Takeaways Box.
+3. 📝 Structured Article Body with Proper H2 & H3 Markdown Headings.
+4. 🏁 Strategic Conclusion & Next Steps / CTA.
+"""
+    elif content_type == "Email Newsletter":
+        prompt += """
+[REQUIRED FORMATTING & STRUCTURE]
+1. ✉️ 3 High Open-Rate Subject Lines + Preview Text.
+2. ⚡ Personal/Conversational Opening Hook.
+3. 📌 Main Value Delivery (Structured into readable sections).
+4. 🎯 Clear Single Call-To-Action (CTA) Button text.
 """
     return prompt
 
-# Streamlit UI Rendering
-st.title("⚡ Draftly AI Content Engine")
-st.caption("Topcoder Contest Submission | Powered by Google Gemini 2.5 Flash")
+# --- App Layout & Header ---
+st.markdown('<p class="main-header">⚡ Draftly AI Content Engine</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-header">Topcoder Contest Submission | Enterprise Multi-Format Generator powered by Gemini 2.5 Flash</p>', unsafe_allow_html=True)
 
+# --- Sidebar Configuration ---
 with st.sidebar:
-    st.header("⚙️ Output Settings")
+    st.header("⚙️ Engine Controls")
+    
     content_type = st.selectbox(
         "Content Format",
-        ["YouTube Video Script", "Social Media Post", "SEO Content"]
+        [
+            "YouTube Video Script",
+            "SEO Long-Form Article",
+            "Social Media Post (LinkedIn/Twitter)",
+            "Email Newsletter"
+        ]
     )
-    tone = st.text_input("Tone/Voice", placeholder="e.g., Energetic, Professional")
-    length = st.selectbox("Output Depth", ["Short", "Standard", "In-depth"])
-    audience = st.text_input("Target Audience", placeholder="e.g., Content Creators")
+    
+    tone = st.selectbox(
+        "Tone / Brand Voice",
+        ["Authoritative & Professional", "Energetic & Viral", "Conversational & Friendly", "Educational & Technical"]
+    )
+    
+    length = st.select_slider(
+        "Output Depth",
+        options=["Concise", "Standard", "In-depth Comprehensive"]
+    )
+    
+    language = st.selectbox(
+        "Target Language",
+        ["English", "Hindi", "Hinglish", "Spanish", "French"]
+    )
+    
+    audience = st.text_input("Target Audience", placeholder="e.g. Founders, Content Creators, Developers")
 
-topic = st.text_area("Core Topic / Prompt *", placeholder="Enter your topic or narrative brief here...")
-details = st.text_area("Additional Context & Constraints (Optional)", placeholder="Add specific requirements or details...")
+# --- Main Form Inputs ---
+col1, col2 = st.columns([2, 1])
 
-if st.button("Generate Content 🚀", type="primary"):
+with col1:
+    topic = st.text_area(
+        "Core Topic / Brief *",
+        placeholder="e.g., How to build and scale a SaaS startup using AI tools in 2026...",
+        height=140
+    )
+
+with col2:
+    details = st.text_area(
+        "Constraints & Context (Optional)",
+        placeholder="e.g., Mention budget constraints, target beginner audience, include 3 specific tool recommendations...",
+        height=140
+    )
+
+# --- Execution & Generation ---
+if st.button("Generate Enterprise Draft 🚀", type="primary"):
     if not topic.strip():
-        st.error("Please enter a valid topic before generating.")
+        st.error("⚠️ Please provide a core topic or prompt before executing generation.")
     else:
-        with st.spinner("Executing Gemini AI Engine pipeline..."):
+        with st.spinner("⚡ Executing Gemini 2.5 Flash Pipeline & Structuring Response..."):
             try:
+                start_time = time.time()
                 client = get_gemini_client()
-                formatted_prompt = build_prompt(content_type, topic, tone, length, audience, details)
+                
+                formatted_prompt = build_contest_prompt(
+                    content_type, topic, tone, length, audience, details, language
+                )
                 
                 response = client.models.generate_content(
                     model="gemini-2.5-flash",
                     contents=formatted_prompt
                 )
                 
-                st.success("Generation Complete!")
-                st.markdown("### Output Result")
-                st.markdown(response.text)
+                elapsed_time = round(time.time() - start_time, 2)
+                
+                st.success(f"✅ Generation Complete in {elapsed_time}s!")
+                st.divider()
+                
+                # --- Result Display & Tools ---
+                st.markdown("### 📄 Generated Output")
+                output_text = response.text
+                st.markdown(output_text)
+                
+                st.divider()
+                
+                # Download Options for Contest Showcase
+                st.download_button(
+                    label="📥 Download Draft (.txt)",
+                    data=output_text,
+                    file_name=f"draftly_{content_type.lower().replace(' ', '_')}.txt",
+                    mime="text/plain"
+                )
                 
             except Exception as e:
-                classified_err = classify_gemini_error(e)
-                st.error(f"Error: {str(classified_err)}")
+                st.error(f"❌ Execution Error: {str(e)}")
                 
