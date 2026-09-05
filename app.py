@@ -154,7 +154,7 @@ if st.button("Generate Enterprise Draft 🚀", type="primary"):
     if not topic.strip():
         st.error("⚠️ Please provide a core topic or prompt before executing generation.")
     else:
-        with st.spinner("⚡ Executing Gemini 2.5 Flash Pipeline & Structuring Response..."):
+        with st.spinner("⚡ Executing Gemini 3.6 Flash Pipeline & Structuring Response..."):
             try:
                 start_time = time.time()
                 client = get_gemini_client()
