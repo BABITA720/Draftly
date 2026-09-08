@@ -1,10 +1,6 @@
-import os
 import time
 import streamlit as st
 import google.genai as genai
-
-# Set Google AI Studio Key directly in Environment
-os.environ["GEMINI_API_KEY"] = "AQ.Ab8RN6IfPm6qG5NQg-bNof6LgYKQ2vzaL0jRHpQM4usGfyTeeA"
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -49,7 +45,7 @@ def get_gemini_client():
 def build_contest_prompt(content_type: str, topic: str, tone: str, length: str, audience: str, details: str, language: str) -> str:
     prompt = f"""
 [SYSTEM ROLE: SENIOR CONTENT ARCHITECT & COPYWRITER]
-You are Draftly AI Engine v2.5, an enterprise-grade content generation system.
+You are Draftly AI Engine v3.6, an enterprise-grade content generation system.
 Generate a production-ready, highly engaging piece of content based on the parameters below.
 
 [PARAMETERS]
@@ -99,7 +95,7 @@ Generate a production-ready, highly engaging piece of content based on the param
 
 # --- App Layout & Header ---
 st.markdown('<p class="main-header">⚡ Draftly AI Content Engine</p>', unsafe_allow_html=True)
-st.markdown('<p class="sub-header">Topcoder Contest Submission | Enterprise Multi-Format Generator powered by Gemini 2.5 Flash</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-header">Devpost Hackathon Submission | Enterprise Multi-Format Generator powered by Gemini 3.6 Flash</p>', unsafe_allow_html=True)
 
 # --- Sidebar Configuration ---
 with st.sidebar:
